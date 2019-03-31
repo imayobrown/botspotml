@@ -17,4 +17,4 @@ def information_port_pair(source_port, destination_port):
 @app.route('/v1/csv/test')
 def send_csv_file():
 
-    return send_file('')
+    return send_file('./ISCX_Botnet-Training.pcap_Flow.csv')
