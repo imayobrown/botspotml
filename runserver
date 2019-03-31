@@ -1,1 +1,1 @@
-FLASK_APP=mlserver.py pipenv run flask run
+FLASK_APP=mlserver.py nohup pipenv run flask run --host=0.0.0.0 &> server.log &
