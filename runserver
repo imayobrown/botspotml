@@ -1,0 +1,1 @@
+FLASK_APP=mlserver.py pipenv run flask run
