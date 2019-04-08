@@ -1,8 +1,5 @@
 import os
 
-from multiprocessing.pool import Pool
-from multiprocessing import Queue
-
 from flask import flash
 from flask import Flask
 from flask import jsonify
@@ -15,8 +12,9 @@ from flask_uploads import configure_uploads
 from flask_uploads import UploadSet
 from werkzeug.utils import secure_filename
 
-from utils.utils import process_pcap
-from utils.utils import process_echo
+from utils.utils import process_pcap_async
+from utils.utils import DIR_FLOW_LOG
+from utils.utils import DIR_FLOW_PROCESS
 
 
 CONTENT_TYPE = 'Content-Type'
@@ -32,36 +30,35 @@ app.config['UPLOADS_DEFAULT_DEST'] = os.getcwd()
 
 configure_uploads(app, (pcap))
 
-process_pool = Pool(4)
-
-in_process_queue = Queue(20)
-
 
 # HELPER FUNCTIONS
 
-def submit_process(func, args):
+def is_json_request(request):
 
-    global process_pool
+    jsonRequest = False
 
-    res = process_pool.apply_async(func, args)
+    if CONTENT_TYPE in request.headers and request.headers[CONTENT_TYPE] == 'application/json':
 
-    return res
+        jsonRequest = True
 
-
-def submit_echo_process():
-
-    echo_arg = "ECHO THIS"
-
-    res = submit_process(process_echo, (echo_arg, app.logger))
-
-    return res
+    return jsonRequest
 
 
-def submit_pcap_process(pcap_file_name):
+def create_flow_log_dirs():
 
-    res = submit_process(process_pcap, (pcap_file_name))
+    if not os.path.exists(DIR_FLOW_LOG):
 
-    return res
+        os.makedirs(DIR_FLOW_LOG)
+
+    if not os.path.exists(DIR_FLOW_PROCESS):
+
+        os.makedirs(DIR_FLOW_PROCESS)
+
+
+@app.before_first_request
+def init():
+
+    create_flow_log_dirs()
 
 
 # ENDPOINTS
@@ -72,28 +69,11 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/v1/echo')
-def echo():
+@app.route('/v1/csv/<file_name>')
+def send_csv_file(file_name):
 
-    submit_echo_process()
-
-    return 'echo'
-
-
-@app.route('/v1/process/pcap/<file_name>')
-def process_pcap(file_name):
-
-    res = submit_pcap_process(file_name)
-
-    app.logger.info(res.get(timeout=1))
-
-    return 'Processing...'
-
-
-@app.route('/v1/csv/test')
-def send_csv_file():
-
-    return send_file(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], 'ISCX_Botnet-Training.pcap_Flow.csv'))
+    # return send_file(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], 'ISCX_Botnet-Training.pcap_Flow.csv'))
+    return send_file(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], file_name))
 
 
 @app.route('/v1/list/<file_type>')
@@ -101,7 +81,7 @@ def list_files(file_type):
 
     files = os.listdir(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], secure_filename(file_type)))
 
-    if CONTENT_TYPE in request.headers and request.headers[CONTENT_TYPE] == 'application/json':
+    if is_json_request(request):
 
         response = jsonify(files)
 
@@ -119,7 +99,7 @@ def upload():
 
         filename = pcap.save(request.files['pcap'])
 
-        submit_pcap_process(filename)
+        process_pcap_async(filename)
 
         return redirect(url_for('upload_success'))
 
@@ -135,4 +115,12 @@ def upload_success():
 @app.route('/v1/processing')
 def processing():
 
-    return 'LIST OF THINGS BEING PROCESSED...'
+    pcaps_being_processed = os.listdir(DIR_FLOW_PROCESS)
+
+    if is_json_request(request):
+
+        response = jsonify(pcaps_being_processed)
+
+    else:
+
+        return '\n'.join(pcaps_being_processed)
