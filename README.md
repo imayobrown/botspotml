@@ -1,57 +1,37 @@
 # 2019-Spring-CSE6242-mlserver
 
-## Initial Thinking
+## Non-API
 
-Server is deployed with models already trained. Training models is part of building the server software package. Each model is stored as a pickle in the server as a resource file. 
+### Homepage
 
-Server should take in a pcap file during startup or via a POST.
+`/`
 
-Given the pcap file it should extract the flows from the pcap file.
+Links out to the commonly used pages. Future plans are for this page to contain the API documentation.
 
-It should then perform classification on the generated flows. Each model available should be used to perform classification.
+### Upload
 
-It should expose endpoints which allow for providing insights into IP pairs, port pairs, and IP + port pairs.
+`/v1/upload`
 
-Example Request: GET https://mlserver.domain/v1/info?src\_ip=192.168.1.12&dest\_ip=192.168.1.10&src\_port=12345&dest\_port=23456
-
-Example Return: JSON blob containing info about the values in the query
+Though the endpoint has the `/v1` prefix, it is not yet part of the official API. Currently, uploads are only supported via an html form. Future plans are to streamline this via API and document how to use it.
 
 ## API
 
-### IP Pairs
+### Processing
 
-__Request__: /v1/ip\_pair/{source\_ip}/{destination\_ip}
+`/v1/processing`
 
-__Response__:
+List the uploaded `.pcap` files that are being processed by the server at the time of the request.
 
-```
-{
-    "botnet_flow_liklihood": int
-}
-```
+### List
 
-### Port Pairs
+`/v1/list/<file_type>`
 
-__Request__: /v1/port\_pair/{source\_port}/{destination\_port}
+`file_type`: `csv`, `pcap`
 
-__Response__:
+List the files of `file_type` that have been uploaded to the server.
 
-```
-{
-    "botnet_flow_liklihood": int
-}
-```
+### CSV
 
-## Open Questions
+`/v1/csv/<file_name>`
 
-Q: How to relate IP pairs, port pairs, IP + port pairs to individual flows?
-
-A: It is likely that a given port pair will not be will not be used for background traffic and botnet traffic. It is possible that IP pairs will contain botnet traffic and background traffic. 
-
-Given an IP pair or port pair we could provide likelihood that traffic between them is malicious.
-
-BENIGN: No flow containing the IP pair is classified as botnet
-POSSIBLY BOTNET: One or more flows containing the IP pair is classified as botnet 
-BOTNET: All flows containing the IP pair are classified as botnet
-
-We could even represent these as percentages which could lend itself to easy visualization.
+Download a csv flow file with `file_name` from the server. Used to retrieve processed `.pcap` files.
