@@ -1,16 +1,19 @@
 import os
 import pickle
 
+import numpy as np
 import pandas as pd
 
 from multiprocessing import Process
 from subprocess import call
 
 
-DIR_FLOW_LOG         = 'flow_creation_logs'
-DIR_FLOW_PROCESS     = 'flow_process_semaphores'
-DIR_CLASSIFIED_FLOWS = 'classified_flows'
-DIR_MODELS           = 'models'
+DIR_FLOW_LOG           = 'flow_creation_logs'
+DIR_FLOW_PROCESS       = 'flow_process_semaphores'
+DIR_CSV                = 'csv'
+DIR_MODELS             = 'models'
+DIR_CLASSIFIED_FLOWS   = os.path.join(DIR_CSV, 'classified_flows')
+DIR_UNCLASSIFIED_FLOWS = os.path.join(DIR_CSV, 'unclassified_flows')
 
 
 def rfc_classification(data, pcap_file_name):
@@ -21,8 +24,12 @@ def rfc_classification(data, pcap_file_name):
 
     print('Binning data for Random Forest Classifier...')
 
+    bins = 5
+
     # binning columns
-    for feature in data[7:]:
+    for feature in data.columns[7:]:
+
+        print('Feature: ', feature)
 
         data[feature] = pd.cut(data[feature], bins, labels=False)
 
@@ -54,7 +61,7 @@ def rfc_classification(data, pcap_file_name):
 
     # Unpickle rfc model and classify data
 
-    with open('./{}/rfc_model.pkl'.format(DIR_MODELS)) as rfc_pkl:
+    with open('./{}/rfc_model.pkl'.format(DIR_MODELS), 'rb') as rfc_pkl:
 
         rfc_model = pickle.load(rfc_pkl)
 
@@ -66,9 +73,13 @@ def rfc_classification(data, pcap_file_name):
 
     # Write out classified data to csv file
 
-    print('Writing data classified by Random Forest model to {}...'.format())
+    labeled_flow_csv_path = '{}/{}_Flow_labeled.csv'.format(DIR_CLASSIFIED_FLOWS, pcap_file_name)
 
-    data.to_csv('{}/{}_Flow_labeled.csv')
+    print('Writing data classified by Random Forest model to {}...'.format(labeled_flow_csv_path))
+
+    # print('Data: ', data)
+
+    data.to_csv(labeled_flow_csv_path)
 
 
 def clean_data_and_add_composite_features(pcap_file_name):
@@ -84,7 +95,7 @@ def clean_data_and_add_composite_features(pcap_file_name):
 
     # Read data in pandas DataFrame
 
-    pcap_flow = pd.read_csv('{}_Flow.csv'.format(pcap_file_name), low_memory=False)
+    pcap_flow = pd.read_csv(os.path.join(DIR_UNCLASSIFIED_FLOWS, '{}_Flow.csv'.format(pcap_file_name)), low_memory=False)
 
     # Create composite features
 
@@ -101,8 +112,6 @@ def clean_data_and_add_composite_features(pcap_file_name):
     pcap_flow = pcap_flow.fillna(0)  # Replace NaN's with 0's
 
     feature_list = [ col for col in pcap_flow.columns ]
-
-    # Clean non-numeric values from dataset
 
     for feature in feature_list[7:-3]:
 
@@ -128,7 +137,7 @@ def generate_flows_with_cic_flow_meter(pcap_file_name):
 
     with open('{}/{}.log'.format(DIR_FLOW_LOG, pcap_file_name), 'wb') as log:
 
-        call(['./cfm', '../../pcap/{}'.format(pcap_file_name), '../../csv/'], stdout=log, stderr=log, env=env, cwd='./CICFlowMeter-4.0/bin/')
+        call(['./cfm', '../../pcap/{}'.format(pcap_file_name), '../../{}'.format(DIR_UNCLASSIFIED_FLOWS)], stdout=log, stderr=log, env=env, cwd='./CICFlowMeter-4.0/bin/')
 
     os.remove(semaphore_file)
 
@@ -139,11 +148,11 @@ def process_pcap(pcap_file_name):
         pcap_file_name: str
     """
 
-    generate_flows_with_cic_flow_meter(pcap_file_name)
+    # generate_flows_with_cic_flow_meter(pcap_file_name)
 
-    # cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
+    cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
 
-    # rfc_classification(cleaned_data.copy(), pcap_file_name)
+    rfc_classification(cleaned_data.copy(), pcap_file_name)
 
 
 def process_pcap_async(pcap_filename):

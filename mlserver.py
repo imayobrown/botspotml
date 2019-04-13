@@ -16,6 +16,7 @@ from utils.utils import process_pcap_async
 from utils.utils import DIR_FLOW_LOG
 from utils.utils import DIR_FLOW_PROCESS
 from utils.utils import DIR_CLASSIFIED_FLOWS
+from utils.utils import DIR_UNCLASSIFIED_FLOWS
 
 
 pcap = UploadSet('pcap', extensions=('pcap'))
@@ -41,11 +42,16 @@ def create_flow_log_dirs():
 
         os.makedirs(DIR_FLOW_PROCESS)
 
-def create_classified_flows_dir():
+
+def create_csv_flow_dirs():
 
     if not os.path.exists(DIR_CLASSIFIED_FLOWS):
 
         os.makedirs(DIR_CLASSIFIED_FLOWS)
+
+    if not os.path.exists(DIR_UNCLASSIFIED_FLOWS):
+
+        os.makedirs(DIR_UNCLASSIFIED_FLOWS)
 
 
 @app.before_first_request
@@ -53,7 +59,7 @@ def init():
 
     create_flow_log_dirs()
 
-    create_classified_flows_dir()
+    create_csv_flow_dirs()
 
 
 # ENDPOINTS
