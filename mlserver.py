@@ -18,9 +18,6 @@ from utils.utils import DIR_FLOW_PROCESS
 from utils.utils import DIR_CLASSIFIED_FLOWS
 
 
-CONTENT_TYPE = 'Content-Type'
-
-
 pcap = UploadSet('pcap', extensions=('pcap'))
 
 app = Flask(__name__)
@@ -33,17 +30,6 @@ configure_uploads(app, (pcap))
 
 
 # HELPER FUNCTIONS
-
-def is_json_request(request):
-
-    jsonRequest = False
-
-    if CONTENT_TYPE in request.headers and request.headers[CONTENT_TYPE] == 'application/json':
-
-        jsonRequest = True
-
-    return jsonRequest
-
 
 def create_flow_log_dirs():
 
@@ -90,15 +76,13 @@ def list_files(file_type):
 
     files = os.listdir(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], secure_filename(file_type)))
 
-    if is_json_request(request):
+    response = {
+        'Results': files
+    }
 
-        response = jsonify(files)
+    # response = render_template('list.html', file_type=file_type, files=files)
 
-    else:
-
-        response = render_template('list.html', file_type=file_type, files=files)
-
-    return response
+    return jsonify(response)
 
 
 @app.route('/v1/upload', methods=['GET', 'POST'])
@@ -124,12 +108,14 @@ def upload_success():
 @app.route('/v1/processing')
 def processing():
 
-    pcaps_being_processed = os.listdir(DIR_FLOW_PROCESS)
+    pcaps_in_progress = os.listdir(DIR_FLOW_PROCESS)
 
-    if is_json_request(request):
+    mapped_pcaps = [ x[:-11] for x in pcaps_in_progress]
 
-        response = jsonify(pcaps_being_processed)
+    response = {
+        'Results': mapped_pcaps
+    }
 
-    else:
+    # response = '\n'.join(pcaps_being_processed)
 
-        return '\n'.join(pcaps_being_processed)
+    return jsonify(response)
