@@ -8,6 +8,9 @@ verify_ssl = true
 [packages]
 flask = "*"
 flask-uploads = "*"
+pandas = "*"
+numpy = "*"
+scikit-learn = "*"
 
 [requires]
 python_version = "3.7"
