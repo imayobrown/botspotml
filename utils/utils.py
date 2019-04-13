@@ -13,19 +13,6 @@ DIR_CLASSIFIED_FLOWS = 'classified_flows'
 DIR_MODELS           = 'models'
 
 
-def process_pcap(pcap_file_name):
-    """
-    Args:
-        pcap_file_name: str
-    """
-
-    generate_flows_with_cic_flow_meter(pcap_file_name)
-
-    cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
-
-    rfc_classification(cleaned_data.copy(), pcap_file_name)
-
-
 def rfc_classification(data, pcap_file_name):
     """
     Args:
@@ -146,6 +133,19 @@ def generate_flows_with_cic_flow_meter(pcap_file_name):
     os.remove(semaphore_file)
 
 
+def process_pcap(pcap_file_name):
+    """
+    Args:
+        pcap_file_name: str
+    """
+
+    generate_flows_with_cic_flow_meter(pcap_file_name)
+
+    cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
+
+    rfc_classification(cleaned_data.copy(), pcap_file_name)
+
+
 def process_pcap_async(pcap_filename):
     """
     Args:
@@ -159,4 +159,4 @@ def process_pcap_async(pcap_filename):
 
 if __name__ == '__main__':
 
-    process_pcap_async('testDset-with_iscx.pcap')
+    process_pcap_async('testDset-with-iscx.pcap')

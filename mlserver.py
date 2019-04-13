@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 from utils.utils import process_pcap_async
 from utils.utils import DIR_FLOW_LOG
 from utils.utils import DIR_FLOW_PROCESS
+from utils.utils import DIR_CLASSIFIED_FLOWS
 
 
 CONTENT_TYPE = 'Content-Type'
@@ -54,11 +55,19 @@ def create_flow_log_dirs():
 
         os.makedirs(DIR_FLOW_PROCESS)
 
+def create_classified_flows_dir():
+
+    if not os.path.exists(DIR_CLASSIFIED_FLOWS):
+
+        os.makedirs(DIR_CLASSIFIED_FLOWS)
+
 
 @app.before_first_request
 def init():
 
     create_flow_log_dirs()
+
+    create_classified_flows_dir()
 
 
 # ENDPOINTS
