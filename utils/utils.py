@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import pandas as pd
 
@@ -9,6 +10,7 @@ from subprocess import call
 DIR_FLOW_LOG         = 'flow_creation_logs'
 DIR_FLOW_PROCESS     = 'flow_process_semaphores'
 DIR_CLASSIFIED_FLOWS = 'classified_flows'
+DIR_MODELS           = 'models'
 
 
 def process_pcap(pcap_file_name):
@@ -64,6 +66,10 @@ def rfc_classification(data, pcap_file_name):
     data_model_ndarray = data_model.values
 
     # Unpickle rfc model and classify data
+
+    with open('./{}/rfc_model.pkl'.format(DIR_MODELS)) as rfc_pkl:
+
+        rfc_model = pickle.load(rfc_pkl)
 
     print('Classifying data using Random Forest model...')
 
@@ -138,6 +144,7 @@ def generate_flows_with_cic_flow_meter(pcap_file_name):
         call(['./cfm', '../../pcap/{}'.format(pcap_file_name), '../../csv/'], stdout=log, stderr=log, env=env, cwd='./CICFlowMeter-4.0/bin/')
 
     os.remove(semaphore_file)
+
 
 def process_pcap_async(pcap_filename):
     """
