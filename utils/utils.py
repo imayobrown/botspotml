@@ -141,9 +141,9 @@ def process_pcap(pcap_file_name):
 
     generate_flows_with_cic_flow_meter(pcap_file_name)
 
-    cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
+    # cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
 
-    rfc_classification(cleaned_data.copy(), pcap_file_name)
+    # rfc_classification(cleaned_data.copy(), pcap_file_name)
 
 
 def process_pcap_async(pcap_filename):
