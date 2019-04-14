@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PID=$(ps -ef | grep -m 1 "flask run" | tr -s " " | cut -d " " -f 2)
+PID=$(ps -ef | grep -m 1 "python3" | tr -s " " | cut -d " " -f 2)
 
 echo "Killng process ${PID}..."
 

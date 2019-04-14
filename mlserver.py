@@ -1,5 +1,6 @@
 import os
 
+from flask import abort
 from flask import flash
 from flask import Flask
 from flask import jsonify
@@ -15,7 +16,7 @@ from werkzeug.utils import secure_filename
 from utils.utils import process_pcap_async
 from utils.utils import DIR_FLOW_LOG
 from utils.utils import DIR_FLOW_PROCESS
-from utils.utils import DIR_CLASSIFIED_FLOWS
+from utils.utils import DIR_CLASSIFIED_FLOWS_RFC
 from utils.utils import DIR_UNCLASSIFIED_FLOWS
 
 
@@ -45,9 +46,9 @@ def create_flow_log_dirs():
 
 def create_csv_flow_dirs():
 
-    if not os.path.exists(DIR_CLASSIFIED_FLOWS):
+    if not os.path.exists(DIR_CLASSIFIED_FLOWS_RFC):
 
-        os.makedirs(DIR_CLASSIFIED_FLOWS)
+        os.makedirs(DIR_CLASSIFIED_FLOWS_RFC)
 
     if not os.path.exists(DIR_UNCLASSIFIED_FLOWS):
 
@@ -70,23 +71,53 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/v1/csv/<file_name>')
-def send_csv_file(file_name):
+@app.route('/v1/csv/unclassified/<file_name>')
+def send_unclassified_csv_file(flow_type, file_name):
 
-    # return send_file(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], 'ISCX_Botnet-Training.pcap_Flow.csv'))
-    return send_file(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], file_name))
+    return send_file(os.path.join(os.getcwd(), DIR_UNCLASSIFIED_FLOWS, secure_filename(file_name)))
 
 
-@app.route('/v1/list/<file_type>')
-def list_files(file_type):
+@app.route('/v1/csv/classified/<model_type>/<file_name>')
+def send_classified_csv_file(model_type, file_name):
 
-    files = os.listdir(os.path.join(app.config['UPLOADS_DEFAULT_DEST'], secure_filename(file_type)))
+    if model_type == 'rfc':
+
+        return send_file(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name)))
+
+    else:
+
+        return "Classifier of type '{}' is not yet supported.".format(model_type), 404
+
+
+@app.route('/v1/list/csv/unclassified')
+def list_unclassified_flow_files():
+
+    files = os.listdir(os.path.join(os.getcwd(), DIR_UNCLASSIFIED_FLOWS))
 
     response = {
         'Results': files
     }
 
-    # response = render_template('list.html', file_type=file_type, files=files)
+    return jsonify(response)
+
+
+@app.route('/v1/list/csv/classified/<model_type>')
+def list_classified_flow_files(model_type):
+
+    if model_type != 'rfc':
+
+        error_json = {
+            'Results': None,
+            'Error': "Valid value for /v1/csv/classified/<model_type> is 'rfc'"
+        }
+
+        return jsonify(error_json), 404
+
+    files = os.listdir(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC))
+
+    response = {
+        'Results': files
+    }
 
     return jsonify(response)
 
@@ -125,3 +156,8 @@ def processing():
     # response = '\n'.join(pcaps_being_processed)
 
     return jsonify(response)
+
+
+if __name__ == '__main__':
+
+    app.run(host='0.0.0.0', debug=True)

@@ -7,10 +7,10 @@ verify_ssl = true
 
 [packages]
 flask = "*"
-flask-uploads = "*"
-pandas = "*"
 numpy = "*"
+pandas = "*"
+flask-uploads = "*"
 scikit-learn = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.6"

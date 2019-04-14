@@ -24,14 +24,32 @@ List the uploaded `.pcap` files that are being processed by the server at the ti
 
 ### List
 
-`/v1/list/<file_type>`
+#### unclassified
 
-`file_type`: `csv`, `pcap`
+`/v1/list/csv/unclassified`
 
-List the files of `file_type` that have been uploaded to the server.
+List the raw unclassified flow csv files (the flow files produced before they are processed and classified by models).
+
+#### classified
+
+`/v1/list/csv/classified/<model_type>`
+
+`model`: `rfc`
+
+List the csv flow files after they have been classified by a model of type `model_type`
 
 ### CSV
 
-`/v1/csv/<file_name>`
+#### unclassified
 
-Download a csv flow file with `file_name` from the server. Used to retrieve processed `.pcap` files.
+`/v1/csv/unclassified/<file_name>`
+
+Download a raw csv flow file with `file_name` from the server. Used to retrieve raw results of extracting flows from `.pcap` files.
+
+#### classified
+
+`/v1/csv/classified/<model_type>/<file_name>`
+
+`model`: `rfc`
+
+Download a file flow file which has been processed and classified by a model of type `model_type`.
