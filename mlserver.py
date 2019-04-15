@@ -89,7 +89,7 @@ def send_unclassified_csv_file(file_name):
 
         with tempfile.NamedTemporaryFile() as temp_csv_file:
 
-            data_subset.to_csv(temp_csv_file.name)
+            data_subset.to_csv(temp_csv_file.name, index=False)
 
             return send_file(temp_csv_file.name)
 
