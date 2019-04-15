@@ -1,0 +1,7 @@
+<!doctype html>
+<title>Upload .pcap File</title>
+<h1>Upload .pcap File</h1>
+<form method=post enctype=multipart/form-data action="{{ url_for('upload') }}">
+  <input type=file name=pcap>
+  <input type=submit value=Upload>
+</form>

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+IDENTITY_FILE=$1
+EC2_USER=ec2-user
+ML_SERVER_HOSTNAME=ec2-54-224-49-247.compute-1.amazonaws.com
+ML_SERVER_DIR=/home/ec2-user/mlserver
+
+rsync -av -e "ssh -i ${IDENTITY_FILE}" --exclude='.git/' --exclude='*.zip' --exclude='.git/**/*' --exclude='*.pcap*' --exclude='MachineLearningCVE/' --exclude='CICFlowMeter-4.0/' --exclude=README.md --exclude=updateserver --exclude='*.swp' --exclude='*.log' ./ ${EC2_USER}@${ML_SERVER_HOSTNAME}:${ML_SERVER_DIR}/
+
+rsync -av -e "ssh -i ${IDENTITY_FILE}" ./pcap/test.pcap ${EC2_USER}@${ML_SERVER_HOSTNAME}:${ML_SERVER_DIR}/pcap/test.pcap
