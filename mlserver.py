@@ -1,4 +1,7 @@
 import os
+import tempfile
+
+import pandas as pd
 
 from flask import abort
 from flask import flash
@@ -74,7 +77,27 @@ def home():
 @app.route('/v1/csv/unclassified/<file_name>')
 def send_unclassified_csv_file(flow_type, file_name):
 
-    return send_file(os.path.join(os.getcwd(), DIR_UNCLASSIFIED_FLOWS, secure_filename(file_name)))
+    qp_columns = 'columns'
+
+    columns = request.args.get(qp_columms).split(',') if qp_columns in request.args else []
+
+    csv_file_path = os.path.join(os.getcwd(), DIR_UNCLASSIFIED_FLOWS, secure_filename(file_name))
+
+    if len(columns) != 0:
+
+        data_subset = pd.read_csv(csv_file_path)
+
+        data_subset = data_subset[columns]
+
+        with open tempfile.NamedTemporaryFile() as temp_csv_file:
+
+            data_subset.to_csv(temp_csv_file.name)
+
+            return send_file(temp_csv_file)
+
+    else:
+
+        return send_file(os.path.join(os.getcwd(), DIR_UNCLASSIFIED_FLOWS, secure_filename(file_name)))
 
 
 @app.route('/v1/csv/classified/<model_type>/<file_name>')
