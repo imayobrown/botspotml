@@ -18,6 +18,11 @@ import sys
 # Load data:
 pcap_flow = pd.read_csv('/home/t/PycharmProjects/Group_Project/labeled_test.csv')
 
+# Hyperparams
+batch_size = 50
+epochs = 10
+learning_rate = .01
+
 # Specify labels data:
 print('Storing labels and converting to numeric values')
 labels = pcap_flow.pop('Label')
@@ -55,9 +60,8 @@ variables = pcap_flow[['Src Port', 'Dst Port', 'Protocol',
        ]]
 
 #  Create Synthetic Features
-pcap_flow['Total Sum Bytes'] = pd.Series(np.sum([pcap_flow['TotLen Fwd Pkts'], pcap_flow['TotLen Bwd Pkts']], axis=0))
 pcap_flow['Max / Avg'] = pd.Series(np.divide(pcap_flow['Pkt Len Max'], pcap_flow['Pkt Len Mean']))
-pcap_flow['Total Packets'] = pd.Series(np.sum([pcap_flow['Tot Fwd Pkts'], pcap_flow['Tot Bwd Pkts']], axis=0))
+
 
 print("Cleaning Data...")
 ### Clean data ###
@@ -69,33 +73,9 @@ feature_list = []  # List of features to iterate on
 for col in pcap_flow.columns:
     feature_list.append(col)
 
-# Clean non-numeric values from dataset
-for feature in feature_list[7:-3]:
-    pcap_flow[feature] = pcap_flow[feature].replace('E', '', regex=True).replace('-', '', regex=True).replace('Infinity', '0', regex=True).astype(float)
-
 DNN_DF_Model_Data = pcap_flow[['Src Port', 'Dst Port', 'Protocol',
-       'Flow Duration', 'Tot Fwd Pkts', 'Tot Bwd Pkts',
-       'TotLen Fwd Pkts', 'TotLen Bwd Pkts', 'Fwd Pkt Len Max',
-       'Fwd Pkt Len Min', 'Fwd Pkt Len Mean', 'Fwd Pkt Len Std',
-       'Bwd Pkt Len Max', 'Bwd Pkt Len Min', 'Bwd Pkt Len Mean',
-       'Bwd Pkt Len Std', 'Flow Byts/s', 'Flow Pkts/s', 'Flow IAT Mean',
-       'Flow IAT Std', 'Flow IAT Max', 'Flow IAT Min', 'Fwd IAT Tot',
-       'Fwd IAT Mean', 'Fwd IAT Std', 'Fwd IAT Max', 'Fwd IAT Min',
-       'Bwd IAT Tot', 'Bwd IAT Mean', 'Bwd IAT Std', 'Bwd IAT Max',
-       'Bwd IAT Min', 'Fwd PSH Flags', 'Bwd PSH Flags', 'Fwd URG Flags',
-       'Bwd URG Flags', 'Fwd Header Len', 'Bwd Header Len', 'Fwd Pkts/s',
-       'Bwd Pkts/s', 'Pkt Len Min', 'Pkt Len Max', 'Pkt Len Mean',
-       'Pkt Len Std', 'Pkt Len Var', 'FIN Flag Cnt', 'SYN Flag Cnt',
-       'RST Flag Cnt', 'PSH Flag Cnt', 'ACK Flag Cnt', 'URG Flag Cnt',
-       'CWE Flag Count', 'ECE Flag Cnt', 'Down/Up Ratio', 'Pkt Size Avg',
-       'Fwd Seg Size Avg', 'Bwd Seg Size Avg', 'Fwd Byts/b Avg',
-       'Fwd Pkts/b Avg', 'Fwd Blk Rate Avg', 'Bwd Byts/b Avg',
-       'Bwd Pkts/b Avg', 'Bwd Blk Rate Avg', 'Subflow Fwd Pkts',
-       'Subflow Fwd Byts', 'Subflow Bwd Pkts', 'Subflow Bwd Byts',
-       'Init Fwd Win Byts', 'Init Bwd Win Byts', 'Fwd Act Data Pkts',
-       'Fwd Seg Size Min', 'Active Mean', 'Active Std', 'Active Max',
-       'Active Min', 'Idle Mean', 'Idle Std', 'Idle Max', 'Idle Min',
-       'Total Sum Bytes', 'Max / Avg', 'Total Packets']].apply(pd.to_numeric).values
+       'FIN Flag Cnt', 'SYN Flag Cnt', 'ACK Flag Cnt',
+       'Down/Up Ratio', 'Bwd Seg Size Avg', 'Max / Avg']].apply(pd.to_numeric).values
 
 class Neural_Net(nn.Module):
     def __init__(self, D_in):
@@ -173,12 +153,27 @@ def train_NN(data, target, batch_size, epochs, learning_rate):
 
     return [net, total_losses]
 
-X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(DNN_DF_Model_Data, labels, shuffle=True, random_state=100, test_size=0.3)
 
-print(labels)
+def test(model, x_test, y_test):
+    test_tensor = torch.utils.data.TensorDataset(torch.Tensor(x_test), torch.tensor(y_test))
+    test_loader = torch.utils.data.DataLoader(dataset=test_tensor, batch_size=len(y_test), shuffle=True)
 
-res = train_NN(data=X_train, target=y_train, batch_size=150, epochs=1, learning_rate=0.1)
+    dataiter = iter(test_loader)
+    data, target = dataiter.next()
+    model_output = model[0](data)
 
+    _, predictions_tensor = torch.max(model_output.round(), 1)
+    predictions = np.squeeze(predictions_tensor.numpy())
+
+    metrics = sklearn.metrics.confusion_matrix(y_test, predictions).ravel()
+
+    return metrics
+
+
+x_train, x_test, y_train, y_test = sklearn.model_selection.train_test_split(DNN_DF_Model_Data, labels, shuffle=True, random_state=100, test_size=0.3)
+
+res = train_NN(data=x_train, target=y_train, batch_size=batch_size, epochs=epochs, learning_rate=learning_rate)
+'''
 plt.plot(res[1])
 plt.xlabel("Iteration Number")
 plt.ylabel("Loss")
@@ -193,3 +188,11 @@ except IOError:
 
 pickle.dump(res, output)
 output.close()
+'''
+#  Testing
+res_metrics = test(res, x_test, y_test)
+
+print("True Negatives: {:.3%}".format(res_metrics[0] / len(y_test)))
+print("True Positives: {:.3%}".format(res_metrics[3] / len(y_test)))
+print("False Positives: {:.3%}".format(res_metrics[1] / len(y_test)))
+print("False Negatives: {:.3%}".format(res_metrics[2] / len(y_test)))
