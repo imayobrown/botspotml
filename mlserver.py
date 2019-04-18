@@ -103,7 +103,25 @@ def send_classified_csv_file(model_type, file_name):
 
     if model_type == 'rfc':
 
-        return send_file(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name)))
+        columns = request.args.get('columns').split(',') if 'columns' in request.args else []
+
+        csv_file_path = os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name))
+
+        if len(columns) != 0:
+
+            data_subset = pd.read_csv(csv_file_path)
+
+            data_subset = data_subset[columns]
+
+            with tempfile.NamedTemporaryFile() as temp_csv_file:
+
+                data_subset.to_csv(temp_csv_file.name, index=False)
+
+                return send_file(temp_csv_file.name)
+
+        else:
+
+            return send_file(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name)))
 
     else:
 
