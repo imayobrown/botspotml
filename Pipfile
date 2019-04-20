@@ -11,6 +11,7 @@ numpy = "*"
 pandas = "*"
 flask-uploads = "*"
 scikit-learn = "*"
+torch = "*"
 
 [requires]
 python_version = "3.6"

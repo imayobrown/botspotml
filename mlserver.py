@@ -192,8 +192,6 @@ def processing():
         'Results': mapped_pcaps
     }
 
-    # response = '\n'.join(pcaps_being_processed)
-
     return jsonify(response)
 
 

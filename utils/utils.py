@@ -3,9 +3,12 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import torch
 
 from multiprocessing import Process
 from subprocess import call
+
+from utils import DeepNeuralNetwork
 
 
 DIR_FLOW_LOG             = 'flow_creation_logs'
@@ -81,6 +84,72 @@ def rfc_classification(data, pcap_file_name):
     data.to_csv(labeled_flow_csv_path)
 
 
+def dnn_predict(data, model, batch_size=200):
+
+    # Switch to evaluate mode:
+    model.eval()
+
+    # Transform data into desired format with specified batch size:
+    test_tensor = torch.utils.data.TensorDataset(torch.Tensor(data))
+    test_loader = torch.utils.data.DataLoader(dataset=test_tensor, batch_size=batch_size)
+
+    # Initiate predictions output of the function:
+    predictions_output = []
+
+    # Run the main testing loop:
+    for batch_i, x_batch in enumerate(test_loader):
+
+        # Predict classes of test set:
+        outputs = model(x_batch)
+
+        # Identify whether prediction is 0 or 1 (1 if probability is >= 0.5):
+        predictions = [float(value[0]) for value in (outputs >= 0.5).tolist()]
+
+        # Append to the output predictions:
+        predictions_output.extend(predictions)
+
+    # Format prediction output as pandas Series:
+    predictions_output = pd.Series(predictions_output)
+
+    return predictions_output
+
+
+def dnn_classification(data, pcap_file_name):
+
+    features = ['Src Port', 'Dst Port', 'Protocol', 'Fwd Pkt Len Max',
+                       'Fwd Pkt Len Std', 'Bwd Pkt Len Mean', 'Bwd Pkt Len Std',
+                       'Flow IAT Max', 'Fwd IAT Max', 'Bwd IAT Tot',
+                       'Bwd IAT Std', 'Bwd IAT Max', 'Bwd PSH Flags', 'Fwd Pkts/s',
+                       'Bwd Pkts/s', 'Pkt Len Mean', 'Pkt Len Std', 'FIN Flag Cnt',
+                       'SYN Flag Cnt', 'RST Flag Cnt', 'ACK Flag Cnt', 'Down/Up Ratio',
+                       'Fwd Seg Size Avg', 'Bwd Seg Size Avg', 'Init Bwd Win Byts', 'Idle Mean',
+                       'Idle Max', 'Idle Min']
+
+    data_model = data[features]
+
+    data_model_ndarray = data_model.apply(pd.to_numeric).values
+
+    # Load model from pth file
+
+    dnn_model = DeepNeuralNetwork(D_in=len(features)).load_state_dict(torch.load('{}/Deep_Neural_Network.pth'.format(DIR_MODELS)), strict=False)
+
+    dnn_model.to(torch.device('cpu'))
+
+    labels = dnn_predict(data_model_ndarray, dnn_model)
+
+    data['Label'] = labels
+
+    # Write out classified data to csv file
+
+    labeled_flow_csv_path = '{}/{}_Flow_labeled.csv'.format(DIR_CLASSIFIED_FLOWS_DNN, pcap_file_name)
+
+    print('Writing data classified by DNN model to {}...'.format(labeled_flow_csv_path))
+
+    # print('Data: ', data)
+
+    data.to_csv(labeled_flow_csv_path)
+
+
 def clean_data_and_add_composite_features(pcap_file_name):
     """
     Args:
@@ -130,15 +199,9 @@ def generate_flows_with_cic_flow_meter(pcap_file_name):
         'JAVA_OPTS': '-Xmx4g -Xms2g'
     }
 
-    semaphore_file = '{}/{}.processing'.format(DIR_FLOW_PROCESS, pcap_file_name)
-
-    with open(semaphore_file, 'wb'): pass
-
     with open('{}/{}.log'.format(DIR_FLOW_LOG, pcap_file_name), 'wb') as log:
 
         call(['./cfm', '../../pcap/{}'.format(pcap_file_name), '../../{}'.format(DIR_UNCLASSIFIED_FLOWS)], stdout=log, stderr=log, env=env, cwd='./CICFlowMeter-4.0/bin/')
-
-    os.remove(semaphore_file)
 
 
 def process_pcap(pcap_file_name):
@@ -147,11 +210,19 @@ def process_pcap(pcap_file_name):
         pcap_file_name: str
     """
 
+    semaphore_file = '{}/{}.processing'.format(DIR_FLOW_PROCESS, pcap_file_name)
+
+    with open(semaphore_file, 'wb'): pass
+
     generate_flows_with_cic_flow_meter(pcap_file_name)
 
     cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
 
     rfc_classification(cleaned_data.copy(), pcap_file_name)
+
+    dnn_classification(cleaned_data.copy(), pcap_file_name)
+
+    os.remove(semaphore_file)
 
 
 def process_pcap_async(pcap_filename):
