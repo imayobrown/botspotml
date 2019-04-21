@@ -1,5 +1,15 @@
 #!/bin/bash
 
+sudo yum install git -y
+
+sudo yum install java-1.8.0-openjdk -y
+
+sudo yum install python3 -y
+
+sudo pip3 install pipenv
+
+sudo yum install libpcap-devel -y
+
 pipenv install flask numpy pandas flask-uploads scikit-learn torch
 
 wget https://s3.amazonaws.com/cse6242-groupproject-team69/CICFlowMeter-4.0.zip

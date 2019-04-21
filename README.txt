@@ -9,21 +9,22 @@ and hopefully better understand the behavior of malicious botnet traffic.
 
 ## System Requirements ##
 
-In order to run the server on your system you must have the following installed and available on its PATH:
+In order to run the server the following must be installed and available on the PATH:
 
 1. Python 3.x - https://www.python.org/downloads/
 2. pip - https://pypi.org/project/pip/
 3. pipenv - https://pipenv.readthedocs.io/en/latest/
 4. Java - https://openjdk.java.net/
-5. libpcap-dev or libpcap-devel depending on linux distribution
+5. libpcap-devel
 6. wget
 7. bash
+8. git
 
-NOTE: This server must be run on linux due to binary file requirements
+NOTE: This server must be run on a Fedora based linux distribution system due to the requirement for yum in the 'bootstrapserver' script.
 
 ## Setup ##
 
-In order to run the server clone this repository and run the following.
+In order to run the server clone this repository and run the following from the base of the repository.
 
 ```
 ./bootstrapserver
