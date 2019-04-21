@@ -34,3 +34,6 @@ In order to check the server you can either `tail -f` or `cat` the `server.log` 
 
 Assuming the networking settings of the system allow inbound and outbound connections on port 5000 this should make the server available at http://<server_ip>:5000/
 
+## Execution ##
+
+In order to test out the server go to http://<server_ip>:5000/v1/upload and upload a .pcap file. Then use the API outlined in the README.md to view the results of the analysis.
