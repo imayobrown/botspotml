@@ -4,11 +4,11 @@ import pickle
 import numpy as np
 import pandas as pd
 import torch
+import torch.utils.data
+import torch.nn as nn
 
 from multiprocessing import Process
 from subprocess import call
-
-from utils import DeepNeuralNetwork
 
 
 DIR_FLOW_LOG             = 'flow_creation_logs'
@@ -17,6 +17,7 @@ DIR_CSV                  = 'csv'
 DIR_MODELS               = 'models'
 DIR_CLASSIFIED_FLOWS     = os.path.join(DIR_CSV, 'classified_flows')
 DIR_CLASSIFIED_FLOWS_RFC = os.path.join(DIR_CLASSIFIED_FLOWS, 'rfc')
+DIR_CLASSIFIED_FLOWS_DNN = os.path.join(DIR_CLASSIFIED_FLOWS, 'dnn')
 DIR_UNCLASSIFIED_FLOWS   = os.path.join(DIR_CSV, 'unclassified_flows')
 
 
@@ -96,11 +97,15 @@ def dnn_predict(data, model, batch_size=200):
     # Initiate predictions output of the function:
     predictions_output = []
 
+    print('model: ', model)
+
     # Run the main testing loop:
     for batch_i, x_batch in enumerate(test_loader):
 
+        print('x_batch: ', x_batch)
+
         # Predict classes of test set:
-        outputs = model(x_batch)
+        outputs = model(x_batch[0])
 
         # Identify whether prediction is 0 or 1 (1 if probability is >= 0.5):
         predictions = [float(value[0]) for value in (outputs >= 0.5).tolist()]
@@ -108,22 +113,24 @@ def dnn_predict(data, model, batch_size=200):
         # Append to the output predictions:
         predictions_output.extend(predictions)
 
-    # Format prediction output as pandas Series:
-    predictions_output = pd.Series(predictions_output)
+    prediction_output_labels = [ 'botnet' if x else 'notbotnet' for x in predictions_output ]
 
-    return predictions_output
+    # Format prediction output as pandas Series:
+    prediction_output_labels = pd.Series(prediction_output_labels)
+
+    return prediction_output_labels
 
 
 def dnn_classification(data, pcap_file_name):
 
     features = ['Src Port', 'Dst Port', 'Protocol', 'Fwd Pkt Len Max',
-                       'Fwd Pkt Len Std', 'Bwd Pkt Len Mean', 'Bwd Pkt Len Std',
-                       'Flow IAT Max', 'Fwd IAT Max', 'Bwd IAT Tot',
-                       'Bwd IAT Std', 'Bwd IAT Max', 'Bwd PSH Flags', 'Fwd Pkts/s',
-                       'Bwd Pkts/s', 'Pkt Len Mean', 'Pkt Len Std', 'FIN Flag Cnt',
-                       'SYN Flag Cnt', 'RST Flag Cnt', 'ACK Flag Cnt', 'Down/Up Ratio',
-                       'Fwd Seg Size Avg', 'Bwd Seg Size Avg', 'Init Bwd Win Byts', 'Idle Mean',
-                       'Idle Max', 'Idle Min']
+               'Fwd Pkt Len Std', 'Bwd Pkt Len Mean', 'Bwd Pkt Len Std',
+               'Flow IAT Max', 'Fwd IAT Max', 'Bwd IAT Tot',
+               'Bwd IAT Std', 'Bwd IAT Max', 'Bwd PSH Flags', 'Fwd Pkts/s',
+               'Bwd Pkts/s', 'Pkt Len Mean', 'Pkt Len Std', 'FIN Flag Cnt',
+               'SYN Flag Cnt', 'RST Flag Cnt', 'ACK Flag Cnt', 'Down/Up Ratio',
+               'Fwd Seg Size Avg', 'Bwd Seg Size Avg', 'Init Bwd Win Byts', 'Idle Mean',
+               'Idle Max', 'Idle Min']
 
     data_model = data[features]
 
@@ -131,7 +138,9 @@ def dnn_classification(data, pcap_file_name):
 
     # Load model from pth file
 
-    dnn_model = DeepNeuralNetwork(D_in=len(features)).load_state_dict(torch.load('{}/Deep_Neural_Network.pth'.format(DIR_MODELS)), strict=False)
+    dnn_model = Deep_Neural_Network(D_in=len(features))
+
+    dnn_model.load_state_dict(torch.load('{}/Deep_Neural_Network.pth'.format(DIR_MODELS), map_location='cpu'), strict=False)
 
     dnn_model.to(torch.device('cpu'))
 
@@ -144,8 +153,6 @@ def dnn_classification(data, pcap_file_name):
     labeled_flow_csv_path = '{}/{}_Flow_labeled.csv'.format(DIR_CLASSIFIED_FLOWS_DNN, pcap_file_name)
 
     print('Writing data classified by DNN model to {}...'.format(labeled_flow_csv_path))
-
-    # print('Data: ', data)
 
     data.to_csv(labeled_flow_csv_path)
 
@@ -236,6 +243,91 @@ def process_pcap_async(pcap_filename):
     async_process.start()
 
 
+class Deep_Neural_Network(nn.Module):
+
+    def __init__(self, D_in, fc1_size=40, fc2_size=20, fc3_size=40, fc4_size=20, fc5_size=40):
+        """
+        Neural Network model with 1 hidden layer.
+
+        D_in: Dimension of input
+        fc1_size, fc2_size, etc.: Dimensions of respective hidden layers
+        """
+
+        super(Deep_Neural_Network, self).__init__()
+
+        # Input Layer:
+
+        self.fc1 = nn.Linear(D_in, fc1_size)
+        nn.init.kaiming_normal_(self.fc1.weight)
+        #self.bn1 = nn.BatchNorm1d(fc1_size)
+        self.relu1 = nn.LeakyReLU()
+
+        # 2nd Layer:
+
+        self.fc2 = nn.Linear(fc1_size, fc2_size)
+        nn.init.kaiming_normal_(self.fc2.weight)
+        #self.bn2 = nn.BatchNorm1d(fc2_size)
+        self.relu2 = nn.LeakyReLU()
+
+        # 3rd Layer:
+
+        self.fc3 = nn.Linear(fc2_size, fc3_size)
+        nn.init.kaiming_normal_(self.fc3.weight)
+        #self.bn3 = nn.BatchNorm1d(fc3_size)
+        self.relu3 = nn.LeakyReLU()
+
+        # 4rd Layer:
+
+        self.fc4 = nn.Linear(fc3_size, fc4_size)
+        nn.init.kaiming_normal_(self.fc4.weight)
+        #self.bn4 = nn.BatchNorm1d(fc4_size)
+        self.relu4 = nn.LeakyReLU()
+
+        # 5th Layer:
+
+        self.fc5 = nn.Linear(fc4_size, fc5_size)
+        nn.init.kaiming_normal_(self.fc5.weight)
+        #self.bn5 = nn.BatchNorm1d(fc5_size)
+        self.relu5 = nn.LeakyReLU()
+
+        # Final Layer:
+
+        self.fc_output = nn.Linear(fc5_size, 1) # 1 because this is binary classification
+        self.fc_output_activation = nn.Sigmoid()
+
+        # Dropout implemented across all layers except Final Layer:
+
+        self.dropout = nn.Dropout(p=0.5)
+
+    def forward(self, x):
+        """
+        Forward function acceps a Tensor of input data and returns a tensor of output data.
+        """
+
+        #out = self.dropout(self.relu1(self.bn1(self.fc1(x))))
+        #out = self.dropout(self.relu2(self.bn2(self.fc2(out))))
+        #out = self.dropout(self.relu3(self.bn3(self.fc3(out))))
+        #out = self.dropout(self.relu4(self.bn4(self.fc4(out))))
+        #out = self.dropout(self.relu5(self.bn5(self.fc5(out))))
+
+        out = self.dropout(self.relu1(self.fc1(x)))
+        out = self.dropout(self.relu2(self.fc2(out)))
+        out = self.dropout(self.relu3(self.fc3(out)))
+        out = self.dropout(self.relu4(self.fc4(out)))
+        out = self.dropout(self.relu5(self.fc5(out)))
+        out = self.fc_output_activation(self.fc_output(out))
+
+        return out
+
+
 if __name__ == '__main__':
 
-    process_pcap_async('testDset-with-iscx.pcap')
+    # process_pcap_async('testDset-with-iscx.pcap')
+
+    pcap_file_name = 'testDset-with-iscx.pcap'
+
+    cleaned_data = clean_data_and_add_composite_features(pcap_file_name)
+
+    # rfc_classification(cleaned_data.copy(), pcap_file_name)
+
+    dnn_classification(cleaned_data.copy(), pcap_file_name)
