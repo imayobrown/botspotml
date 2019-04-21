@@ -20,6 +20,7 @@ from utils.utils import process_pcap_async
 from utils.utils import DIR_FLOW_LOG
 from utils.utils import DIR_FLOW_PROCESS
 from utils.utils import DIR_CLASSIFIED_FLOWS_RFC
+from utils.utils import DIR_CLASSIFIED_FLOWS_DNN
 from utils.utils import DIR_UNCLASSIFIED_FLOWS
 
 
@@ -52,6 +53,10 @@ def create_csv_flow_dirs():
     if not os.path.exists(DIR_CLASSIFIED_FLOWS_RFC):
 
         os.makedirs(DIR_CLASSIFIED_FLOWS_RFC)
+
+    if not os.path.exists(DIR_CLASSIFIED_FLOWS_DNN):
+
+        os.makedirs(DIR_CLASSIFIED_FLOWS_DNN)
 
     if not os.path.exists(DIR_UNCLASSIFIED_FLOWS):
 
