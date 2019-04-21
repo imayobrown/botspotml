@@ -106,11 +106,19 @@ def send_unclassified_csv_file(file_name):
 @app.route('/v1/csv/classified/<model_type>/<file_name>')
 def send_classified_csv_file(model_type, file_name):
 
-    if model_type == 'rfc':
+    if model_type in ['rfc', 'dnn']:
+
+        if model_type == 'rfc':
+
+            target_directory = DIR_CLASSIFIED_FLOWS_RFC
+
+        if model_type == 'dnn':
+
+            target_directory = DIR_CLASSIFIED_FLOWS_DNN
 
         columns = request.args.get('columns').split(',') if 'columns' in request.args else []
 
-        csv_file_path = os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name))
+        csv_file_path = os.path.join(os.getcwd(), target_directory, secure_filename(file_name))
 
         if len(columns) != 0:
 
@@ -126,7 +134,7 @@ def send_classified_csv_file(model_type, file_name):
 
         else:
 
-            return send_file(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC, secure_filename(file_name)))
+            return send_file(os.path.join(os.getcwd(), target_directory, secure_filename(file_name)))
 
     else:
 
@@ -148,16 +156,24 @@ def list_unclassified_flow_files():
 @app.route('/v1/list/csv/classified/<model_type>')
 def list_classified_flow_files(model_type):
 
-    if model_type != 'rfc':
+    if model_type not in ['rfc', 'dnn']:
 
         error_json = {
             'Results': None,
-            'Error': "Valid value for /v1/csv/classified/<model_type> is 'rfc'"
+            'Error': "Valid values for /v1/csv/classified/<model_type> are ['rfc', 'dnn']"
         }
 
         return jsonify(error_json), 404
 
-    files = os.listdir(os.path.join(os.getcwd(), DIR_CLASSIFIED_FLOWS_RFC))
+    if model_type == 'rfc':
+
+        target_directory = DIR_CLASSIFIED_FLOWS_RFC
+
+    if model_type == 'dnn':
+
+        target_directory = DIR_CLASSIFIED_FLOWS_DNN
+
+    files = os.listdir(os.path.join(os.getcwd(), target_directory))
 
     response = {
         'Results': files

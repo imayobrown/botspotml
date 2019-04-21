@@ -40,7 +40,7 @@ List the raw unclassified flow csv files (the flow files produced before they ar
 
 **Method**: `GET`
 
-Valid values for `model_type`: [`rfc`]
+Valid values for `model_type`: [`rfc`, `dnn`]
 
 List the csv flow files after they have been classified by a model of type `model_type`
 
@@ -62,7 +62,7 @@ Download a raw csv flow file with `file_name` from the server. Used to retrieve 
 
 **URL**: `/v1/csv/classified/<model_type>/<file_name>`
 
-Valid values for `model_type`: [`rfc`]
+Valid values for `model_type`: [`rfc`, `dnn`]
 
 __query parameters__:
 
