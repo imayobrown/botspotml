@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pipenv install -e .
+pipenv install flask numpy pandas flask-uploads scikit-learn torch
 
 wget https://s3.amazonaws.com/cse6242-groupproject-team69/CICFlowMeter-4.0.zip
 
