@@ -1,0 +1,8 @@
+#!/bin/bash
+
+pipenv install -e .
+
+wget https://s3.amazonaws.com/cse6242-groupproject-team69/CICFlowMeter-4.0.zip
+
+unzip -u CICFlowMeter-4.0.zip
+
